@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ai.study.mapper.StudyTaskMapper">
+
+    <resultMap id="StudyTaskResultMap" type="com.ai.study.domain.StudyTask">
+        <id property="id" column="id" />
+        <result property="userId" column="user_id" />
+        <result property="title" column="title" />
+        <result property="description" column="description" />
+        <result property="targetHours" column="target_hours" />
+        <result property="status" column="status" />
+        <result property="category" column="category" />
+        <result property="deadline" column="deadline" />
+        <result property="createTime" column="create_time" />
+    </resultMap>
+
+    <insert id="insert" parameterType="com.ai.study.domain.StudyTask"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO study_task (user_id, title, description, target_hours, status, category, deadline, create_time)
+        VALUES (#{userId}, #{title}, #{description}, #{targetHours}, #{status}, #{category}, #{deadline}, #{createTime})
+    </insert>
+
+    <update id="update" parameterType="com.ai.study.domain.StudyTask">
+        UPDATE study_task
+        <set>
+            <if test="title != null">title = #{title},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="targetHours != null">target_hours = #{targetHours},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="category != null">category = #{category},</if>
+            <if test="deadline != null">deadline = #{deadline},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM study_task WHERE id = #{id}
+    </delete>
+
+    <select id="findById" resultMap="StudyTaskResultMap">
+        SELECT * FROM study_task WHERE id = #{id}
+    </select>
+
+    <select id="findByUserId" resultMap="StudyTaskResultMap">
+        SELECT * FROM study_task
+        WHERE user_id = #{userId}
+        <if test="query.keyword != null and query.keyword != ''">
+            AND title LIKE CONCAT('%', #{query.keyword}, '%')
+        </if>
+        <if test="query.status != null and query.status != ''">
+            AND status = #{query.status}
+        </if>
+        <if test="query.category != null and query.category != ''">
+            AND category = #{query.category}
+        </if>
+        ORDER BY create_time DESC
+        LIMIT #{query.pageSize} OFFSET ${(query.pageNum - 1) * query.pageSize}
+    </select>
+
+    <select id="countByUserId" resultType="long">
+        SELECT COUNT(*) FROM study_task
+        WHERE user_id = #{userId}
+        <if test="query.keyword != null and query.keyword != ''">
+            AND title LIKE CONCAT('%', #{query.keyword}, '%')
+        </if>
+        <if test="query.status != null and query.status != ''">
+            AND status = #{query.status}
+        </if>
+        <if test="query.category != null and query.category != ''">
+            AND category = #{query.category}
+        </if>
+    </select>
+
+    <select id="findAll" resultMap="StudyTaskResultMap">
+        SELECT * FROM study_task
+        WHERE 1=1
+        <if test="query.keyword != null and query.keyword != ''">
+            AND title LIKE CONCAT('%', #{query.keyword}, '%')
+        </if>
+        <if test="query.status != null and query.status != ''">
+            AND status = #{query.status}
+        </if>
+        <if test="query.category != null and query.category != ''">
+            AND category = #{query.category}
+        </if>
+        ORDER BY create_time DESC
+        LIMIT #{query.pageSize} OFFSET ${(query.pageNum - 1) * query.pageSize}
+    </select>
+
+    <select id="countAll" resultType="long">
+        SELECT COUNT(*) FROM study_task
+        WHERE 1=1
+        <if test="query.keyword != null and query.keyword != ''">
+            AND title LIKE CONCAT('%', #{query.keyword}, '%')
+        </if>
+        <if test="query.status != null and query.status != ''">
+            AND status = #{query.status}
+        </if>
+        <if test="query.category != null and query.category != ''">
+            AND category = #{query.category}
+        </if>
+    </select>
+
+</mapper>
+

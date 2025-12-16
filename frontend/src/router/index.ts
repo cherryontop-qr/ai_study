@@ -6,6 +6,9 @@ const Login = () => import('@/views/Login.vue')
 const Register = () => import('@/views/Register.vue')
 const Layout = () => import('@/views/Layout.vue')
 const Dashboard = () => import('@/views/Dashboard.vue')
+const TodayTasks = () => import('@/views/TodayTasks.vue')
+const TaskList = () => import('@/views/TaskList.vue')
+const RecordList = () => import('@/views/RecordList.vue')
 
 const routes: RouteRecordRaw[] = [
   {
@@ -29,6 +32,24 @@ const routes: RouteRecordRaw[] = [
         path: '',
         name: 'Dashboard',
         component: Dashboard,
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'today',
+        name: 'TodayTasks',
+        component: TodayTasks,
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'tasks',
+        name: 'TaskList',
+        component: TaskList,
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'records',
+        name: 'RecordList',
+        component: RecordList,
         meta: { requiresAuth: true }
       }
     ]
