@@ -4,7 +4,8 @@ import store from '@/store'
 
 const Login = () => import('@/views/Login.vue')
 const Register = () => import('@/views/Register.vue')
-const Home = () => import('@/views/Home.vue')
+const Layout = () => import('@/views/Layout.vue')
+const Dashboard = () => import('@/views/Dashboard.vue')
 
 const routes: RouteRecordRaw[] = [
   {
@@ -21,9 +22,16 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/',
-    name: 'Home',
-    component: Home,
-    meta: { requiresAuth: true }
+    component: Layout,
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        name: 'Dashboard',
+        component: Dashboard,
+        meta: { requiresAuth: true }
+      }
+    ]
   },
   {
     path: '/:pathMatch(.*)*',
