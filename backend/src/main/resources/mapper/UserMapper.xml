@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ai.study.mapper.UserMapper">
+
+    <resultMap id="UserResultMap" type="com.ai.study.domain.User">
+        <id property="id" column="id" />
+        <result property="username" column="username" />
+        <result property="password" column="password" />
+        <result property="nickname" column="nickname" />
+        <result property="role" column="role" />
+        <result property="createTime" column="create_time" />
+    </resultMap>
+
+    <select id="findByUsername" resultMap="UserResultMap">
+        SELECT * FROM user WHERE username = #{username}
+    </select>
+
+    <insert id="insert" parameterType="com.ai.study.domain.User"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user (username, password, nickname, role, create_time)
+        VALUES (#{username}, #{password}, #{nickname}, #{role}, #{createTime})
+    </insert>
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+

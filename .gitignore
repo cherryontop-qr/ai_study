@@ -1,0 +1,63 @@
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+*.swp
+*.swo
+*~
+
+# 编译输出
+target/
+dist/
+build/
+out/
+*.class
+*.jar
+*.war
+
+# 依赖
+node_modules/
+.pnp
+.pnp.js
+
+# 日志
+*.log
+logs/
+
+# 环境变量和敏感配置（重要！）
+.env
+.env.local
+.env.*.local
+application-local.yml
+application-dev.yml
+application-prod.yml
+*.key
+*.pem
+*.secret
+
+# 操作系统
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 临时文件
+*.tmp
+*.temp
+.cache/
+
+# 数据库
+*.db
+*.sqlite
+*.sqlite3
+
+# 测试覆盖率
+coverage/
+.nyc_output/
+
+# 打包文件
+*.zip
+*.tar.gz
+*.rar
+

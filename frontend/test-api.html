@@ -1,0 +1,298 @@
+<!-- 修改 test-api.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>API 测试工具</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select, textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        textarea { height: 150px; font-family: monospace; }
+        button { padding: 10px 20px; background: #4c6fff; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px; }
+        button:hover { background: #3a5fdb; }
+        .result { margin-top: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background: #f9f9f9; }
+        .success { color: green; }
+        .error { color: red; }
+        .details { margin-top: 10px; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 4px; overflow: auto; }
+        .ports { display: flex; gap: 10px; margin-bottom: 10px; }
+        .port-btn { padding: 5px 10px; background: #e0e0e0; border: none; border-radius: 4px; cursor: pointer; }
+        .port-btn.active { background: #4c6fff; color: white; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>API 测试工具</h1>
+
+    <div class="ports">
+        <strong>常用端口:</strong>
+        <button class="port-btn" onclick="setPort('8080')">8080</button>
+        <button class="port-btn" onclick="setPort('8081')">8081</button>
+        <button class="port-btn" onclick="setPort('8088')">8088</button>
+        <button class="port-btn" onclick="setPort('8888')">8888</button>
+        <button class="port-btn" onclick="setPort('3000')">3000</button>
+    </div>
+
+    <div class="form-group">
+        <label for="url">API 地址:</label>
+        <input type="text" id="url" value="http://localhost:8080/api/auth/login">
+    </div>
+
+    <div class="form-group">
+        <label for="method">请求方法:</label>
+        <select id="method">
+            <option value="GET">GET</option>
+            <option value="POST" selected>POST</option>
+            <option value="PUT">PUT</option>
+            <option value="DELETE">DELETE</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="data">请求数据 (JSON):</label>
+        <textarea id="data">{
+  "username": "admin",
+  "password": "123456"
+}</textarea>
+    </div>
+
+    <button onclick="testApi()">测试 API</button>
+    <button onclick="pingBackend()" style="background: #67c23a;">Ping 后端服务</button>
+
+    <div id="result" class="result" style="display: none;">
+        <h3>测试结果</h3>
+        <div id="status"></div>
+        <div class="details">
+            <h4>响应详情:</h4>
+            <pre id="response"></pre>
+        </div>
+    </div>
+
+    <div style="margin-top: 30px;">
+        <h3>后端服务状态:</h3>
+        <ul id="service-status">
+            <li>正在检测...</li>
+        </ul>
+
+        <h3>问题排查步骤:</h3>
+        <ol>
+            <li><button onclick="checkPort(8080)">点击检查 8080 端口</button></li>
+            <li><button onclick="checkSpringBootApp()">检查 Spring Boot 应用</button></li>
+            <li><button onclick="testDatabase()">测试数据库连接</button></li>
+            <li>检查 IDEA 控制台是否有错误日志</li>
+            <li>确保 application.yml 配置正确</li>
+        </ol>
+    </div>
+</div>
+
+<script>
+    // 设置端口
+    function setPort(port) {
+        const urlInput = document.getElementById('url');
+        const currentUrl = urlInput.value;
+        const newUrl = currentUrl.replace(/localhost:\d+/, `localhost:${port}`);
+        urlInput.value = newUrl;
+
+        // 更新按钮状态
+        document.querySelectorAll('.port-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+    }
+
+    // 检查端口是否开放
+    async function checkPort(port) {
+        const statusList = document.getElementById('service-status');
+        statusList.innerHTML = `<li>正在检查端口 ${port}...</li>`;
+
+        try {
+            const response = await fetch(`http://localhost:${port}`, {
+                method: 'GET',
+                mode: 'no-cors' // 允许跨域检查
+            });
+            statusList.innerHTML = `<li style="color: green;">✅ 端口 ${port} 服务正在运行</li>`;
+        } catch (error) {
+            statusList.innerHTML = `<li style="color: red;">❌ 端口 ${port} 无法访问</li>
+                <li>可能原因：</li>
+                <li>1. Spring Boot 应用未启动</li>
+                <li>2. 应用运行在不同端口</li>
+                <li>3. 防火墙阻止访问</li>`;
+        }
+    }
+
+    // 检查 Spring Boot 应用
+    async function checkSpringBootApp() {
+        const statusList = document.getElementById('service-status');
+        statusList.innerHTML = `<li>正在检查 Spring Boot 应用...</li>`;
+
+        try {
+            const response = await fetch('http://localhost:8080/actuator/health', {
+                method: 'GET'
+            });
+            const data = await response.json();
+            statusList.innerHTML = `<li style="color: green;">✅ Spring Boot 应用健康状态: ${data.status}</li>`;
+        } catch (error) {
+            // 尝试其他端点
+            try {
+                const response = await fetch('http://localhost:8080/error', {
+                    method: 'GET'
+                });
+                if (response.status === 404 || response.status === 500) {
+                    statusList.innerHTML = `<li style="color: green;">✅ Spring Boot 正在运行（返回 ${response.status}）</li>`;
+                } else {
+                    throw new Error('未知状态');
+                }
+            } catch (e) {
+                statusList.innerHTML = `<li style="color: red;">❌ Spring Boot 应用未运行或无法访问</li>
+                    <li>请在 IDEA 中：</li>
+                    <li>1. 找到 AiStudyApplication.java</li>
+                    <li>2. 点击运行按钮</li>
+                    <li>3. 查看控制台日志</li>`;
+            }
+        }
+    }
+
+    // Ping 后端服务
+    async function pingBackend() {
+        const url = document.getElementById('url').value;
+        const baseUrl = url.split('/api')[0]; // 获取基础URL
+
+        const resultDiv = document.getElementById('result');
+        const statusDiv = document.getElementById('status');
+        const responseDiv = document.getElementById('response');
+
+        resultDiv.style.display = 'block';
+        statusDiv.innerHTML = '正在 Ping 后端服务...';
+        responseDiv.textContent = '';
+
+        try {
+            const startTime = Date.now();
+            const response = await fetch(baseUrl, {
+                method: 'GET',
+                mode: 'no-cors'
+            });
+            const endTime = Date.now();
+            const pingTime = endTime - startTime;
+
+            statusDiv.className = 'success';
+            statusDiv.innerHTML = `
+                    <strong>✅ 后端服务可达</strong><br>
+                    <strong>地址:</strong> ${baseUrl}<br>
+                    <strong>响应时间:</strong> ${pingTime}ms
+                `;
+            responseDiv.textContent = '服务正常运行';
+        } catch (error) {
+            statusDiv.className = 'error';
+            statusDiv.innerHTML = `
+                    <strong>❌ 无法连接到后端服务</strong><br>
+                    <strong>地址:</strong> ${baseUrl}<br>
+                    <strong>错误:</strong> ${error.message}
+                `;
+            responseDiv.textContent = `请检查：
+1. Spring Boot 是否启动
+2. 运行在哪个端口
+3. 应用配置文件 application.yml/application.properties`;
+        }
+    }
+
+    // 测试数据库
+    async function testDatabase() {
+        const statusList = document.getElementById('service-status');
+        statusList.innerHTML = `<li>测试数据库连接...</li>`;
+
+        try {
+            const response = await fetch('http://localhost:8080/api/test/db', {
+                method: 'GET'
+            });
+            const data = await response.json();
+            statusList.innerHTML = `<li style="color: green;">✅ 数据库连接正常</li>`;
+        } catch (error) {
+            statusList.innerHTML = `<li style="color: orange;">⚠️ 无法测试数据库，需要创建测试接口</li>`;
+        }
+    }
+
+    // 测试 API
+    async function testApi() {
+        const url = document.getElementById('url').value;
+        const method = document.getElementById('method').value;
+        const data = document.getElementById('data').value;
+        const resultDiv = document.getElementById('result');
+        const statusDiv = document.getElementById('status');
+        const responseDiv = document.getElementById('response');
+
+        resultDiv.style.display = 'block';
+        statusDiv.innerHTML = '发送请求中...';
+        responseDiv.textContent = '';
+
+        try {
+            console.log('发送请求到:', url);
+            console.log('请求数据:', data);
+
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: data
+            });
+
+            console.log('响应状态:', response.status, response.statusText);
+
+            // 获取响应头
+            const headers = {};
+            for (const [key, value] of response.headers.entries()) {
+                headers[key] = value;
+            }
+
+            // 获取响应文本
+            const responseText = await response.text();
+            console.log('响应内容:', responseText);
+
+            // 显示结果
+            statusDiv.className = response.ok ? 'success' : 'error';
+            statusDiv.innerHTML = `
+                    <strong>状态:</strong> ${response.status} ${response.statusText}<br>
+                    <strong>类型:</strong> ${response.type}<br>
+                    <strong>URL:</strong> ${response.url}
+                `;
+
+            // 格式化显示响应
+            let formattedResponse = `=== 响应头 ===\n${JSON.stringify(headers, null, 2)}\n\n`;
+            formattedResponse += `=== 响应体 ===\n`;
+
+            try {
+                // 尝试格式化为 JSON
+                const jsonResponse = JSON.parse(responseText);
+                formattedResponse += JSON.stringify(jsonResponse, null, 2);
+            } catch (e) {
+                formattedResponse += responseText || '(空响应)';
+            }
+
+            responseDiv.textContent = formattedResponse;
+
+        } catch (error) {
+            console.error('测试失败:', error);
+            statusDiv.className = 'error';
+            statusDiv.innerHTML = `<strong>错误:</strong> ${error.message}`;
+            responseDiv.textContent = `详细错误：\n${error.stack || error.toString()}\n\n可能的解决方案：\n1. 检查 Spring Boot 是否运行\n2. 检查端口是否正确\n3. 检查 CORS 配置\n4. 查看浏览器控制台 Network 标签页`;
+        }
+    }
+
+    // 页面加载后自动检查
+    window.addEventListener('load', () => {
+        console.log('API 测试页面已加载');
+        console.log('当前时间:', new Date().toLocaleString());
+        console.log('前端 URL:', window.location.href);
+
+        // 自动检查常见端口
+        checkPort(8080);
+        setTimeout(() => checkPort(8081), 500);
+        setTimeout(() => checkPort(8888), 1000);
+    });
+</script>
+</body>
+</html>

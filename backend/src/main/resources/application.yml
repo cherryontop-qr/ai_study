@@ -1,0 +1,64 @@
+# application.yml
+server:
+  port: 8080
+  servlet:
+    context-path: /
+  tomcat:
+    # 增加连接超时时间，用于处理大响应
+    connection-timeout: 120000
+
+spring:
+  application:
+    name: ai-study
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/aistudy?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai}
+    username: ${DB_USERNAME:root}          # 默认 root，可通过环境变量 DB_USERNAME 覆盖
+    password: ${DB_PASSWORD:111111}        # 默认 111111，可通过环境变量 DB_PASSWORD 覆盖
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      maximum-pool-size: 10
+      minimum-idle: 5
+  # 移除 JPA 配置，因为它会与 MyBatis 冲突
+  # jpa:
+  #   hibernate:
+  #     ddl-auto: update
+  #   show-sql: true
+
+# MyBatis 配置
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.ai.study.domain
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+# 日志配置
+logging:
+  level:
+    com.ai.study: DEBUG
+    org.springframework.web: DEBUG
+    org.mybatis: DEBUG
+
+# OpenAPI 配置
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+
+# 应用自定义配置
+app:
+  cors:
+    allowed-origins: http://localhost:3000,http://localhost:5173
+
+# DeepSeek AI 配置（已去掉真实密钥，请使用环境变量注入）
+deepseek:
+  api-key: ${DEEPSEEK_API_KEY:}                         # 从环境变量 DEEPSEEK_API_KEY 读取，默认空
+  base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com/chat/completions}
+  model: ${DEEPSEEK_MODEL:deepseek-chat}
+
