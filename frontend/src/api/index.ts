@@ -11,8 +11,13 @@ instance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   // 只对 /api 路径的请求添加 token，避免拦截静态资源
   if (config.url && config.url.startsWith('/api')) {
     const token = store.state.user.token;
+    const userId = store.state.user.userId;
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
+      // 添加用户ID到请求头，方便后端获取
+      if (userId) {
+        config.headers['X-User-Id'] = String(userId);
+      }
     }
   }
   return config;

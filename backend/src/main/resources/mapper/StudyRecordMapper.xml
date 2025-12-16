@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ai.study.mapper.StudyRecordMapper">
+
+    <resultMap id="StudyRecordResultMap" type="com.ai.study.domain.StudyRecord">
+        <id property="id" column="id" />
+        <result property="taskId" column="task_id" />
+        <result property="studyDate" column="study_date" />
+        <result property="durationMinutes" column="duration_minutes" />
+        <result property="comment" column="comment" />
+        <result property="createTime" column="create_time" />
+    </resultMap>
+
+    <insert id="insert" parameterType="com.ai.study.domain.StudyRecord"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO study_record (task_id, study_date, duration_minutes, comment, create_time)
+        VALUES (#{taskId}, #{studyDate}, #{durationMinutes}, #{comment}, #{createTime})
+    </insert>
+
+    <delete id="deleteById">
+        DELETE FROM study_record WHERE id = #{id}
+    </delete>
+
+    <select id="findByTaskId" resultMap="StudyRecordResultMap">
+        SELECT * FROM study_record WHERE task_id = #{taskId} ORDER BY study_date DESC
+    </select>
+
+    <select id="findByUserIdAndDateRange" resultMap="StudyRecordResultMap">
+        SELECT sr.* FROM study_record sr
+        INNER JOIN study_task st ON sr.task_id = st.id
+        WHERE st.user_id = #{userId}
+        AND sr.study_date BETWEEN #{start} AND #{end}
+        ORDER BY sr.study_date DESC
+    </select>
+
+</mapper>
+
