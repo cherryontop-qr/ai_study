@@ -9,6 +9,8 @@ const Dashboard = () => import('@/views/Dashboard.vue')
 const TodayTasks = () => import('@/views/TodayTasks.vue')
 const TaskList = () => import('@/views/TaskList.vue')
 const RecordList = () => import('@/views/RecordList.vue')
+const AiAssistant = () => import('@/views/AiAssistant.vue')
+const Achievements = () => import('@/views/Achievements.vue')
 
 const routes: RouteRecordRaw[] = [
   {
@@ -50,6 +52,18 @@ const routes: RouteRecordRaw[] = [
         path: 'records',
         name: 'RecordList',
         component: RecordList,
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'ai',
+        name: 'AiAssistant',
+        component: AiAssistant,
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'achievements',
+        name: 'Achievements',
+        component: Achievements,
         meta: { requiresAuth: true }
       }
     ]
