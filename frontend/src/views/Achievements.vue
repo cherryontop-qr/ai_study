@@ -16,7 +16,7 @@
           :key="achievement.id"
           class="achievement-card"
           :class="{ achieved: achievement.unlocked }"
-          @click="showAchievementDetail(achievement)"
+          @click="achievement.unlocked && showAchievementDetail(achievement)"
         >
           <div class="achievement-icon">
             <el-icon :size="48" :color="achievement.unlocked ? '#67c23a' : '#909399'">
@@ -47,15 +47,31 @@
     <el-dialog
       v-model="detailVisible"
       :title="selectedAchievement?.title"
-      width="500px"
+      width="520px"
+      class="achievement-detail-dialog"
+      destroy-on-close
     >
-      <div v-if="selectedAchievement">
-        <p><strong>描述：</strong>{{ selectedAchievement.description }}</p>
-        <p v-if="selectedAchievement.unlocked">
-          <strong>解锁时间：</strong>{{ selectedAchievement.unlockTime || '未知' }}
-        </p>
-        <div v-if="selectedAchievement.progress !== undefined && !selectedAchievement.unlocked">
-          <p><strong>进度：</strong>{{ selectedAchievement.progressText }}</p>
+      <div v-if="selectedAchievement" class="achievement-detail-body">
+        <div class="detail-icon-wrapper" :class="{ unlocked: selectedAchievement.unlocked }">
+          <div class="detail-icon-glow"></div>
+          <el-icon :size="selectedAchievement.unlocked ? 96 : 80">
+            <component :is="selectedAchievement.icon" />
+          </el-icon>
+          <div
+            v-if="selectedAchievement.unlocked"
+            class="detail-badge"
+          >
+            已解锁
+          </div>
+        </div>
+        <div class="detail-text">
+          <p class="detail-description">{{ selectedAchievement.description }}</p>
+          <p v-if="selectedAchievement.unlocked" class="detail-unlock-time">
+            解锁时间：{{ selectedAchievement.unlockTime || '未知' }}
+          </p>
+          <p v-if="selectedAchievement.progress !== undefined" class="detail-progress-text">
+            {{ selectedAchievement.progressText }}
+          </p>
         </div>
       </div>
     </el-dialog>
@@ -362,6 +378,89 @@ onMounted(() => {
 
 .achievement-card.achieved .achievement-title {
   color: #67c23a;
+}
+
+.achievement-detail-dialog :deep(.el-dialog__body) {
+  padding-top: 12px;
+}
+
+.achievement-detail-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.detail-icon-wrapper {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  background: radial-gradient(circle at 30% 20%, #e5f9e7, #e0f2fe);
+  box-shadow:
+    0 15px 30px rgba(15, 23, 42, 0.25),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+}
+
+.detail-icon-wrapper.unlocked {
+  background: radial-gradient(circle at 30% 20%, #fef3c7, #bbf7d0);
+  animation: float-medal 3s ease-in-out infinite;
+}
+
+.detail-icon-glow {
+  position: absolute;
+  inset: 6px;
+  border-radius: inherit;
+  background: radial-gradient(circle, rgba(250, 250, 250, 0.7), transparent 65%);
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.detail-badge {
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #fff;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  box-shadow: 0 4px 10px rgba(22, 163, 74, 0.6);
+}
+
+.detail-text {
+  max-width: 360px;
+}
+
+.detail-description {
+  font-size: 15px;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.detail-unlock-time {
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.detail-progress-text {
+  font-size: 13px;
+  color: #4b5563;
+}
+
+@keyframes float-medal {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
 }
 </style>
 

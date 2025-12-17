@@ -53,7 +53,20 @@
 
       <el-table :data="taskList" v-loading="loading" style="margin-top: 16px;">
         <el-table-column prop="title" label="任务标题" width="200" />
-        <el-table-column prop="description" label="描述" show-overflow-tooltip />
+        <el-table-column label="描述" min-width="200">
+          <template #default="{ row }">
+            <el-tooltip
+              effect="dark"
+              :content="row.description"
+              placement="top"
+              :popper-style="{ maxWidth: '300px' }"
+            >
+              <div class="description-cell">
+                {{ row.description }}
+              </div>
+            </el-tooltip>
+          </template>
+        </el-table-column>
         <el-table-column prop="category" label="分类" width="120" />
         <el-table-column prop="targetHours" label="目标时长" width="100">
           <template #default="{ row }">{{ row.targetHours }} 小时</template>
@@ -68,15 +81,19 @@
         </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status)">{{ getStatusText(row.status) }}</el-tag>
+            <el-tag :type="getStatusType(getAutoStatus(row))">
+              {{ getStatusText(getAutoStatus(row)) }}
+            </el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="deadline" label="截止日期" width="120" />
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="120" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" @click="addToToday(row)">加入今日</el-button>
-            <el-button size="small" type="primary" @click="editTask(row)">编辑</el-button>
-            <el-button size="small" type="danger" @click="deleteTask(row.id)">删除</el-button>
+            <div class="action-buttons">
+              <el-button size="small" @click="openAddToTodayDialog(row)">今日</el-button>
+              <el-button size="small" type="primary" @click="editTask(row)">编辑</el-button>
+              <el-button size="small" type="danger" @click="deleteTask(row.id)">删除</el-button>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -88,8 +105,8 @@
         :page-sizes="[10, 20, 50, 100]"
         layout="total, sizes, prev, pager, next, jumper"
         style="margin-top: 16px; justify-content: flex-end;"
-        @size-change="handleSearch"
-        @current-change="handleSearch"
+        @size-change="handleSizeChange"
+        @current-change="handlePageChange"
       />
     </el-card>
 
@@ -149,6 +166,32 @@
       </template>
     </el-dialog>
   </div>
+
+  <!-- 加入今日任务时设置时长的对话框 -->
+  <el-dialog
+    v-model="addToTodayDialogVisible"
+    title="加入今日任务"
+    width="400px"
+  >
+    <div v-if="selectedTask">
+      <p>任务：{{ selectedTask.title }}</p>
+      <el-form label-width="120px" style="margin-top: 12px;">
+        <el-form-item label="今日学习时长">
+          <el-input-number
+            v-model="todayTaskMinutes"
+            :min="10"
+            :max="selectedTask.targetHours * 60"
+            :step="10"
+          />
+          <span style="margin-left: 8px;">分钟（最多 {{ selectedTask.targetHours * 60 }} 分钟）</span>
+        </el-form-item>
+      </el-form>
+    </div>
+    <template #footer>
+      <el-button @click="addToTodayDialogVisible = false">取消</el-button>
+      <el-button type="primary" @click="confirmAddToToday">确定</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <script lang="ts" setup>
@@ -165,6 +208,11 @@ const dialogVisible = ref(false);
 const dialogTitle = ref('新增任务');
 const formRef = ref();
 const editingTaskId = ref<number | null>(null);
+
+// 加入今日任务对话框相关
+const addToTodayDialogVisible = ref(false);
+const selectedTask = ref<Task | null>(null);
+const todayTaskMinutes = ref<number>(0);
 
 const query = reactive({
   pageNum: 1,
@@ -190,13 +238,8 @@ const rules = {
 
 const STORAGE_LEARNED = 'task_learned_minutes';
 
-const categories = computed(() => {
-  const cats = new Set<string>();
-  taskList.value.forEach(task => {
-    if (task.category) cats.add(task.category);
-  });
-  return Array.from(cats).sort();
-});
+// 分类列表基于全量任务，而不是当前页
+const categories = ref<string[]>([]);
 
 const getTaskProgress = (task: Task): number => {
   const learnedRaw = localStorage.getItem(STORAGE_LEARNED);
@@ -212,6 +255,14 @@ const getProgressColor = (percentage: number): string => {
   if (percentage >= 100) return '#67c23a';
   if (percentage >= 50) return '#409eff';
   return '#e6a23c';
+};
+
+// 根据进度自动计算状态：0% 待办，1-99% 进行中，100% 已完成
+const getAutoStatus = (task: Task): string => {
+  const progress = getTaskProgress(task);
+  if (progress === 0) return 'TODO';
+  if (progress === 100) return 'DONE';
+  return 'DOING';
 };
 
 const getStatusType = (status: string): string => {
@@ -235,10 +286,20 @@ const getStatusText = (status: string): string => {
 const loadTasks = async () => {
   loading.value = true;
   try {
-    const res = await getTaskPage(query);
+    // 后端不按状态过滤，前端根据进度计算状态再筛选
+    const { status, ...rest } = query as any;
+    const res = await getTaskPage({
+      ...(rest as any),
+      status: ''
+    });
     if (res.code === 0) {
-      taskList.value = res.data.list;
-      total.value = res.data.total;
+      let list: Task[] = res.data.list;
+      // 前端状态筛选逻辑
+      if (query.status) {
+        list = list.filter(task => getAutoStatus(task) === query.status);
+      }
+      taskList.value = list;
+      total.value = list.length;
     } else {
       ElMessage.error(res.message || '获取任务列表失败');
     }
@@ -251,6 +312,17 @@ const loadTasks = async () => {
 };
 
 const handleSearch = () => {
+  query.pageNum = 1;
+  loadTasks();
+};
+
+const handlePageChange = () => {
+  // 不重置页码，直接根据当前 query 加载
+  loadTasks();
+};
+
+const handleSizeChange = () => {
+  // 修改每页数量时重置到第 1 页
   query.pageNum = 1;
   loadTasks();
 };
@@ -335,33 +407,69 @@ const deleteTask = async (id: number) => {
   }
 };
 
-const addToToday = (task: Task) => {
+const openAddToTodayDialog = (task: Task) => {
+  selectedTask.value = task;
+  // 默认按整个目标时长
+  todayTaskMinutes.value = task.targetHours * 60;
+  addToTodayDialogVisible.value = true;
+};
+
+const confirmAddToToday = () => {
+  if (!selectedTask.value) return;
+
   const STORAGE_TODOS = 'dashboard_today_todos';
   const todosRaw = localStorage.getItem(STORAGE_TODOS);
   const todos: any[] = todosRaw ? JSON.parse(todosRaw) : [];
-  
-  const exists = todos.find(t => t.taskId === task.id);
+
+  const exists = todos.find(t => t.taskId === selectedTask.value!.id);
   if (exists) {
     ElMessage.warning('该任务已在今日任务中');
+    addToTodayDialogVisible.value = false;
     return;
   }
 
+  const minutes = Math.max(10, Math.min(todayTaskMinutes.value || 0, selectedTask.value.targetHours * 60));
+
   const todayTask = {
-    id: `task-${task.id}-${Date.now()}`,
-    taskId: task.id,
-    text: task.title,
-    targetHours: task.targetHours,
-    todayTargetMinutes: task.targetHours * 60,
+    id: `task-${selectedTask.value.id}-${Date.now()}`,
+    taskId: selectedTask.value.id,
+    text: selectedTask.value.title,
+    targetHours: selectedTask.value.targetHours,
+    todayTargetMinutes: minutes,
     done: false
   };
 
   todos.push(todayTask);
   localStorage.setItem(STORAGE_TODOS, JSON.stringify(todos));
   ElMessage.success('已添加到今日任务');
+  addToTodayDialogVisible.value = false;
+};
+
+// 加载全量分类，供筛选使用
+const loadAllCategories = async () => {
+  try {
+    const res = await getTaskPage({
+      pageNum: 1,
+      pageSize: 1000,
+      keyword: '',
+      status: '',
+      category: ''
+    });
+    if (res.code === 0) {
+      const cats = new Set<string>();
+      (res.data.list as Task[]).forEach(task => {
+        if (task.category) cats.add(task.category);
+      });
+      categories.value = Array.from(cats).sort();
+    }
+  } catch (error) {
+    console.error('加载全部分类失败:', error);
+  }
 };
 
 onMounted(() => {
   loadTasks();
+  loadAllCategories();
 });
 </script>
 
@@ -380,6 +488,20 @@ onMounted(() => {
   display: flex;
   align-items: center;
   margin-bottom: 16px;
+}
+
+.description-cell {
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: stretch;
 }
 </style>
 

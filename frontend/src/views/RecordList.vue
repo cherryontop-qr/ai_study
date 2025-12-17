@@ -9,7 +9,20 @@
 
       <el-table :data="completedTasks" v-loading="loading">
         <el-table-column prop="title" label="任务标题" width="200" />
-        <el-table-column prop="description" label="描述" show-overflow-tooltip />
+        <el-table-column label="描述" min-width="200">
+          <template #default="{ row }">
+            <el-tooltip
+              effect="dark"
+              :content="row.description"
+              placement="top"
+              :popper-style="{ maxWidth: '300px' }"
+            >
+              <div class="description-cell">
+                {{ row.description }}
+              </div>
+            </el-tooltip>
+          </template>
+        </el-table-column>
         <el-table-column prop="category" label="分类" width="120" />
         <el-table-column prop="targetHours" label="目标时长" width="100">
           <template #default="{ row }">{{ row.targetHours }} 小时</template>
@@ -65,14 +78,16 @@ const formatDate = (dateStr: string): string => {
 const loadCompletedTasks = async () => {
   loading.value = true;
   try {
+    // 取出较多任务，然后在前端根据进度筛选出真正 100% 完成的
     const res = await getTaskPage({
       pageNum: 1,
-      pageSize: 200,
+      pageSize: 500,
       keyword: '',
-      status: 'DONE'
+      status: ''
     });
     if (res.code === 0) {
-      completedTasks.value = res.data.list;
+      const list: Task[] = res.data.list;
+      completedTasks.value = list.filter(task => getTaskProgress(task) === 100);
     } else {
       ElMessage.error(res.message || '获取已完成任务失败');
     }
@@ -98,6 +113,13 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.description-cell {
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 </style>
 
