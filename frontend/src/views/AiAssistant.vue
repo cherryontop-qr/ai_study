@@ -241,9 +241,6 @@ const createAllTasks = async () => {
     }
   }
 };
-
-// 页面加载时自动获取学习建议
-loadSuggestion();
 </script>
 
 <style scoped>

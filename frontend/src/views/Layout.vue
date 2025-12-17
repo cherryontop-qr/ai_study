@@ -2,7 +2,9 @@
   <el-container class="layout">
     <el-aside width="220px" class="aside">
       <div class="logo">
-        <div class="logo-icon">📚</div>
+        <div class="logo-icon">
+          <img src="/favicon.ico" alt="Logo" />
+        </div>
         <div class="logo-text">智能学习助手</div>
       </div>
       <el-menu :default-active="activeMenu" class="menu" router>
@@ -90,9 +92,19 @@ const onLogout = () => {
 }
 
 .logo-icon {
-  font-size: 28px;
-  line-height: 1;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   animation: float 3s ease-in-out infinite;
+}
+
+.logo-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
 @keyframes float {
