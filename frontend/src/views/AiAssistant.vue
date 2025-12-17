@@ -319,12 +319,11 @@ const extractCategory = (title: string, description: string): string => {
 const createTaskFromPlan = async (plannedTask: AiPlannedTask) => {
   try {
     const category = extractCategory(plannedTask.title, plannedTask.description);
-      const res = await createTask({
+    const res = await createTask({
       title: plannedTask.title,
       description: plannedTask.description,
       targetHours: plannedTask.suggestedHours,
-      category: category,
-      status: 'TODO'
+      category
     });
     if (res.code === 0) {
       ElMessage.success('任务创建成功');
@@ -358,8 +357,7 @@ const createAllTasks = async () => {
           title: plannedTask.title,
           description: plannedTask.description,
           targetHours: plannedTask.suggestedHours,
-          category: category,
-          status: 'TODO'
+          category
         });
         successCount++;
       } catch (error) {

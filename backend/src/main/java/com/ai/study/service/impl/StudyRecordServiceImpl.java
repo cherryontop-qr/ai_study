@@ -1,6 +1,7 @@
 package com.ai.study.service.impl;
 
 import com.ai.study.domain.StudyRecord;
+import com.ai.study.dto.TaskProgressResponse;
 import com.ai.study.mapper.StudyRecordMapper;
 import com.ai.study.service.StudyRecordService;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,12 @@ public class StudyRecordServiceImpl implements StudyRecordService {
     }
 
     @Override
+    @Transactional
+    public void deleteByTaskId(Long taskId) {
+        studyRecordMapper.deleteByTaskId(taskId);
+    }
+
+    @Override
     public List<StudyRecord> listByTaskId(Long taskId) {
         return studyRecordMapper.findByTaskId(taskId);
     }
@@ -41,6 +48,11 @@ public class StudyRecordServiceImpl implements StudyRecordService {
     @Override
     public List<StudyRecord> listByUserAndDateRange(Long userId, LocalDate start, LocalDate end) {
         return studyRecordMapper.findByUserIdAndDateRange(userId, start, end);
+    }
+
+    @Override
+    public List<TaskProgressResponse> sumDurationByUserId(Long userId) {
+        return studyRecordMapper.sumDurationByUserId(userId);
     }
 }
 

@@ -31,19 +31,21 @@ public class AiServiceImpl implements AiService {
         LocalDate start = end.minusDays(6);
         List<StudyRecord> records = studyRecordService.listByUserAndDateRange(userId, start, end);
         String dataset = records.isEmpty()
-                ? "最近没有打卡记录。"
+                ? "最近 7 天没有任何学习记录。"
                 : records.stream()
-                .map(r -> String.format("日期:%s, 时长:%d 分钟, 备注:%s",
+                .map(r -> String.format("日期:%s, 学习时长:%d 分钟, 学习内容或备注:%s",
                         r.getStudyDate(), r.getDurationMinutes(),
                         r.getComment() == null ? "" : r.getComment()))
                 .collect(Collectors.joining("\n"));
 
         String prompt = """
-                请作为学习规划专家，分析以下学员最近 7 天的学习记录， \
-                从时间投入、任务均衡、效率建议三个层面给出详细反馈， \
-                并建议下一周的重点方向。
-                请用中文回答。
-                记录如下：
+                你是一名学习规划与时间管理教练。\n\
+                - 根据下面最近 7 天的学习记录，分析学员的总体学习时间投入、节奏和稳定性；\n\
+                - 结合「今日任务完成情况」和「全部学习任务总体完成度」这两个维度，给出具体可执行的优化建议，\
+                  包括今天之后 3~5 天应该如何安排学习任务；\n\
+                - 输出结构建议包含：本周学习情况总结、当前任务完成度分析、下一步行动建议三个小节。\n\
+                请用中文回答，语气鼓励、具体，不要出现“打卡”两个字。\n\
+                最近 7 天的学习记录如下：
                 %s
                 """.formatted(dataset);
 
@@ -116,4 +118,5 @@ public class AiServiceImpl implements AiService {
         }
     }
 }
+
 

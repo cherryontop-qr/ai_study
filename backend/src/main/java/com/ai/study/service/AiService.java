@@ -10,3 +10,4 @@ public interface AiService {
     AiTaskPlanResponse generateTaskPlan(Long userId, AiTaskPlanRequest request);
 }
 
+

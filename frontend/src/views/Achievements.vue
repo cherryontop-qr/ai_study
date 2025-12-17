@@ -91,7 +91,8 @@ import {
   Collection
 } from '@element-plus/icons-vue';
 import { getTaskPage } from '@/api/task';
-import type { Task } from '@/types/api';
+import type { Task, TaskProgress } from '@/types/api';
+import { getTaskProgress as getTaskProgressApi } from '@/api/record';
 
 const loading = ref(false);
 const detailVisible = ref(false);
@@ -99,7 +100,6 @@ const selectedAchievement = ref<any>(null);
 
 const STORAGE_TODOS = 'dashboard_today_todos';
 const STORAGE_TARGET = 'dashboard_today_target';
-const STORAGE_LEARNED = 'task_learned_minutes';
 const STORAGE_WEEK = 'dashboard_week_info';
 const STORAGE_ACHIEVEMENTS = 'user_achievements';
 
@@ -161,15 +161,25 @@ const calculateAchievements = async () => {
       .filter((t: any) => t.done)
       .reduce((s: number, t: any) => s + (t.todayTargetMinutes || 0), 0);
 
-    // 获取学习时长数据
-    const learnedRaw = localStorage.getItem(STORAGE_LEARNED);
-    const learned: Record<number, number> = learnedRaw ? JSON.parse(learnedRaw) : {};
-    const totalLearnedMinutes = Object.values(learned).reduce((sum, min) => sum + min, 0);
+    // 获取学习时长数据（从后端统计）
+    let learnedMap: Record<number, number> = {};
+    try {
+      const progressRes = await getTaskProgressApi();
+      if (progressRes.code === 0) {
+        (progressRes.data as TaskProgress[]).forEach(item => {
+          learnedMap[item.taskId] = item.totalMinutes || 0;
+        });
+      }
+    } catch (error) {
+      console.error('获取学习进度失败:', error);
+    }
+    const totalLearnedMinutes = Object.values(learnedMap).reduce((sum, min) => sum + min, 0);
 
     // 计算已完成任务数
-    const doneTasks = tasks.filter(
-      (t: Task) => t.status === 'DONE' || (learned[t.id] || 0) >= t.targetHours * 60
-    ).length;
+    const doneTasks = tasks.filter((t: Task) => {
+      const learnedMinutes = learnedMap[t.id] || 0;
+      return learnedMinutes >= t.targetHours * 60;
+    }).length;
     const totalTasks = tasks.length;
     const taskCompletionPercent = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
 
@@ -197,12 +207,12 @@ const calculateAchievements = async () => {
       },
       {
         id: 'weekStreak',
-        title: '连续打卡 7 天',
-        description: '坚持打卡 7 天，获得「毅力徽章」',
+        title: '本周专注',
+        description: '本周累计学习 ≥ 3600 分钟（60 小时），获得「毅力徽章」',
         icon: Medal,
-        unlocked: weekMinutes >= 7 * 60, // 假设每天至少 60 分钟
-        progress: Math.min(100, Math.round((weekMinutes / (7 * 60)) * 100)),
-        progressText: `本周学习 ${weekMinutes} 分钟`,
+        unlocked: weekMinutes >= 3600,
+        progress: Math.min(100, Math.round((weekMinutes / 3600) * 100)),
+        progressText: `本周学习 ${weekMinutes} / 3600 分钟`,
         unlockTime: unlockedAchievements.weekStreak
       },
       {

@@ -62,6 +62,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
 import { updateTask } from '@/api/task';
+import { createRecord } from '@/api/record';
 
 const STORAGE_TODOS = 'dashboard_today_todos';
 const STORAGE_TARGET = 'dashboard_today_target';
@@ -147,6 +148,21 @@ const saveDailyData = () => {
   localStorage.setItem(STORAGE_TARGET, String(dailyTargetMinutes.value));
 };
 
+// 创建一条学习记录，写入数据库
+const createStudyRecord = async (taskId: number, minutes: number) => {
+  try {
+    if (!taskId || !minutes) return;
+    await createRecord({
+      taskId,
+      studyDate: getTodayDateStr(),
+      durationMinutes: minutes,
+      comment: '今日任务打卡'
+    });
+  } catch (error) {
+    console.error('创建学习记录失败:', error);
+  }
+};
+
 const toggleToday = (item: any) => {
   const learnedRaw = localStorage.getItem(STORAGE_LEARNED);
   const learned: Record<number, number> = learnedRaw ? JSON.parse(learnedRaw) : {};
@@ -156,6 +172,10 @@ const toggleToday = (item: any) => {
   if (item.done) {
     learned[item.taskId || 0] = current + delta;
     updateWeekMinutesByDelta(delta);
+    // 勾选完成时，写一条学习记录到数据库
+    if (item.taskId) {
+      createStudyRecord(item.taskId, delta);
+    }
   } else {
     learned[item.taskId || 0] = Math.max(0, current - delta);
     updateWeekMinutesByDelta(-delta);

@@ -90,7 +90,7 @@
         <el-table-column label="操作" width="120" fixed="right">
           <template #default="{ row }">
             <div class="action-buttons">
-              <el-button size="small" @click="openAddToTodayDialog(row)">今日</el-button>
+              <el-button size="small" @click="openAddToTodayDialog(row)">加入今日任务</el-button>
               <el-button size="small" type="primary" @click="editTask(row)">编辑</el-button>
               <el-button size="small" type="danger" @click="deleteTask(row.id)">删除</el-button>
             </div>
@@ -199,7 +199,8 @@ import { ref, reactive, onMounted, computed } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Search } from '@element-plus/icons-vue';
 import { getTaskPage, createTask, updateTask, deleteTask as deleteTaskApi } from '@/api/task';
-import type { Task } from '@/types/api';
+import type { Task, TaskProgress } from '@/types/api';
+import { getTaskProgress as getTaskProgressApi } from '@/api/record';
 
 const loading = ref(false);
 const taskList = ref<Task[]>([]);
@@ -236,15 +237,14 @@ const rules = {
   targetHours: [{ required: true, message: '请输入目标时长', trigger: 'blur' }]
 };
 
-const STORAGE_LEARNED = 'task_learned_minutes';
+// 由后端记录表统计得到的学习进度
+const learnedMap = ref<Record<number, number>>({});
 
 // 分类列表基于全量任务，而不是当前页
 const categories = ref<string[]>([]);
 
 const getTaskProgress = (task: Task): number => {
-  const learnedRaw = localStorage.getItem(STORAGE_LEARNED);
-  const learned: Record<number, number> = learnedRaw ? JSON.parse(learnedRaw) : {};
-  const learnedMinutes = learned[task.id] || 0;
+  const learnedMinutes = learnedMap.value[task.id] || 0;
   const targetMinutes = task.targetHours * 60;
   if (targetMinutes === 0) return 0;
   const progress = Math.round((learnedMinutes / targetMinutes) * 100);
@@ -281,6 +281,21 @@ const getStatusText = (status: string): string => {
     DONE: '已完成'
   };
   return map[status] || status;
+};
+
+const refreshLearnedMap = async () => {
+  try {
+    const res = await getTaskProgressApi();
+    if (res.code === 0) {
+      const map: Record<number, number> = {};
+      (res.data as TaskProgress[]).forEach(item => {
+        map[item.taskId] = item.totalMinutes || 0;
+      });
+      learnedMap.value = map;
+    }
+  } catch (error) {
+    console.error('加载学习进度失败:', error);
+  }
 };
 
 const loadTasks = async () => {
@@ -366,6 +381,7 @@ const submitForm = async () => {
         if (res.code === 0) {
           ElMessage.success('更新成功');
           dialogVisible.value = false;
+          await refreshLearnedMap();
           loadTasks();
         } else {
           ElMessage.error(res.message || '更新失败');
@@ -375,6 +391,7 @@ const submitForm = async () => {
         if (res.code === 0) {
           ElMessage.success('创建成功');
           dialogVisible.value = false;
+          await refreshLearnedMap();
           loadTasks();
         } else {
           ElMessage.error(res.message || '创建失败');
@@ -395,6 +412,7 @@ const deleteTask = async (id: number) => {
     const res = await deleteTaskApi(id);
     if (res.code === 0) {
       ElMessage.success('删除成功');
+      await refreshLearnedMap();
       loadTasks();
     } else {
       ElMessage.error(res.message || '删除失败');
@@ -468,7 +486,9 @@ const loadAllCategories = async () => {
 };
 
 onMounted(() => {
-  loadTasks();
+  refreshLearnedMap().then(() => {
+    loadTasks();
+  });
   loadAllCategories();
 });
 </script>

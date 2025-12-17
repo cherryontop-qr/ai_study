@@ -155,7 +155,8 @@ import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { Trophy, Medal, StarFilled, ChatDotRound } from '@element-plus/icons-vue';
 import { getTaskPage, updateTask } from '@/api/task';
-import type { Task } from '@/types/api';
+import type { Task, TaskProgress } from '@/types/api';
+import { createRecord, getTaskProgress as getTaskProgressApi } from '@/api/record';
 
 const router = useRouter();
 const loading = ref(false);
@@ -170,10 +171,11 @@ const stats = reactive({
   weekMinutes: 0
 });
 
-// 今日任务与目标
+// 今日任务与目标（本地存储，仅用于展示）
 const STORAGE_TODOS = 'dashboard_today_todos';
 const STORAGE_TARGET = 'dashboard_today_target';
-const STORAGE_LEARNED = 'task_learned_minutes';
+// 由后端记录表统计得到的学习进度（分钟）
+const learnedMap = ref<Record<number, number>>({});
 const STORAGE_WEEK = 'dashboard_week_info';
 const dailyTodos = ref<Array<any>>([]);
 const dailyTargetMinutes = ref<number>(120);
@@ -261,6 +263,36 @@ const updateWeekMinutesByDelta = (delta: number) => {
   saveWeekInfo(info);
 };
 
+// 创建一条学习记录，写入数据库
+const createStudyRecord = async (taskId: number, minutes: number) => {
+  try {
+    if (!taskId || !minutes) return;
+    await createRecord({
+      taskId,
+      studyDate: getTodayDateStr(),
+      durationMinutes: minutes,
+      comment: '今日任务打卡'
+    });
+  } catch (error) {
+    console.error('创建学习记录失败:', error);
+  }
+};
+
+const refreshLearnedMap = async () => {
+  try {
+    const res = await getTaskProgressApi();
+    if (res.code === 0) {
+      const map: Record<number, number> = {};
+      (res.data as TaskProgress[]).forEach(item => {
+        map[item.taskId] = item.totalMinutes || 0;
+      });
+      learnedMap.value = map;
+    }
+  } catch (error) {
+    console.error('加载学习进度失败:', error);
+  }
+};
+
 const fetchStats = async () => {
   loading.value = true;
   try {
@@ -269,13 +301,12 @@ const fetchStats = async () => {
       const taskRes = await getTaskPage({ pageNum: 1, pageSize: 200, keyword: '', status: '' });
       if (taskRes.code === 0) {
         const tasks = taskRes.data.list;
-        const learnedRaw = localStorage.getItem(STORAGE_LEARNED);
-        const learned: Record<number, number> = learnedRaw ? JSON.parse(learnedRaw) : {};
 
-        // 已完成任务数：状态 DONE 或学习时长达到目标
-        stats.doneTasks = tasks.filter(
-          (t: Task) => t.status === 'DONE' || (learned[t.id] || 0) >= t.targetHours * 60
-        ).length;
+        // 已完成任务数：学习记录累计时长达到目标时长视为完成
+        stats.doneTasks = tasks.filter((t: Task) => {
+          const learnedMinutes = learnedMap.value[t.id] || 0;
+          return learnedMinutes >= t.targetHours * 60;
+        }).length;
         // 未完成任务数：总数减去已完成
         stats.totalTasks = Math.max(0, tasks.length - stats.doneTasks);
         // 进行中任务暂不区分，先置 0
@@ -346,29 +377,33 @@ const saveDailyData = () => {
   achievements.todayGoal = dailyProgress.value >= 100;
 };
 
-const toggleToday = (item: any) => {
-  const learnedRaw = localStorage.getItem(STORAGE_LEARNED);
-  const learned: Record<number, number> = learnedRaw ? JSON.parse(learnedRaw) : {};
+const toggleToday = async (item: any) => {
   const delta = item.todayTargetMinutes || (item.targetHours ? item.targetHours * 60 : 0);
-  const current = learned[item.taskId || 0] || 0;
+  const taskId = item.taskId as number | undefined;
 
   if (item.done) {
-    learned[item.taskId || 0] = current + delta;
     // 本周学习时长增加
     updateWeekMinutesByDelta(delta);
+    // 写一条学习记录到数据库，并更新本地进度
+    if (taskId) {
+      await createStudyRecord(taskId, delta);
+      const prev = learnedMap.value[taskId] || 0;
+      learnedMap.value = { ...learnedMap.value, [taskId]: prev + delta };
+      // 如果累计学习时长达到目标，尝试把任务标记为已完成
+      if (item.targetHours && learnedMap.value[taskId] >= item.targetHours * 60) {
+        try {
+          await updateTask(taskId, { status: 'DONE' });
+        } catch {
+          // 忽略错误，任务接口可能暂不可用
+        }
+      }
+    }
   } else {
-    learned[item.taskId || 0] = Math.max(0, current - delta);
-    // 取消勾选则减少本周学习时长
+    // 取消勾选则减少本周学习时长，并回退本地进度
     updateWeekMinutesByDelta(-delta);
-  }
-  localStorage.setItem(STORAGE_LEARNED, JSON.stringify(learned));
-
-  // 如果任务功能已实现，尝试更新任务状态
-  if (item.taskId && item.targetHours && learned[item.taskId] >= item.targetHours * 60) {
-    try {
-      updateTask(item.taskId, { status: 'DONE' });
-    } catch (error) {
-      // 忽略错误，任务功能可能还没实现
+    if (taskId) {
+      const prev = learnedMap.value[taskId] || 0;
+      learnedMap.value = { ...learnedMap.value, [taskId]: Math.max(0, prev - delta) };
     }
   }
 
@@ -379,6 +414,8 @@ const toggleToday = (item: any) => {
   todayTodoDone.value = dailyTodos.value.filter((t: any) => t.done).length;
 
   saveDailyData();
+  // 重新计算任务统计，保证顶部数字和圆形统计图同步
+  await fetchStats();
 };
 
 const goToTasks = () => {
@@ -414,9 +451,10 @@ const goToToday = () => {
   router.push('/today');
 };
 
-onMounted(() => {
+onMounted(async () => {
   loadDailyData();
-  fetchStats();
+  await refreshLearnedMap();
+  await fetchStats();
 });
 </script>
 

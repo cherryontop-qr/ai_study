@@ -2,6 +2,7 @@ package com.ai.study.controller;
 
 import com.ai.study.common.ApiResponse;
 import com.ai.study.domain.StudyRecord;
+import com.ai.study.dto.TaskProgressResponse;
 import com.ai.study.dto.RecordCreateRequest;
 import com.ai.study.service.StudyRecordService;
 import com.ai.study.util.UserContext;
@@ -55,6 +56,13 @@ public class RecordController {
         LocalDate start = end.minusDays(6);
         return ApiResponse.success(studyRecordService.listByUserAndDateRange(
                 getCurrentUserId(), start, end));
+    }
+
+    @Operation(summary = "查询当前用户每个任务累计学习时长")
+    @GetMapping("/progress")
+    public ApiResponse<List<TaskProgressResponse>> listTaskProgress() {
+        Long userId = getCurrentUserId();
+        return ApiResponse.success(studyRecordService.sumDurationByUserId(userId));
     }
 }
 

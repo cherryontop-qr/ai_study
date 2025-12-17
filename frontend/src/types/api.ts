@@ -42,6 +42,12 @@ export interface PageResult<T> {
   pageSize: number;
 }
 
+// 每个任务的累计学习时长（分钟）
+export interface TaskProgress {
+  taskId: number;
+  totalMinutes: number;
+}
+
 export interface StudyRecord {
   id: number;
   taskId: number;

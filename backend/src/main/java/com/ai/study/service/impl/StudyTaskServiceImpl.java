@@ -6,6 +6,7 @@ import com.ai.study.dto.TaskCreateRequest;
 import com.ai.study.dto.TaskQueryRequest;
 import com.ai.study.mapper.StudyTaskMapper;
 import com.ai.study.service.StudyTaskService;
+import com.ai.study.service.StudyRecordService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,7 @@ import java.util.List;
 public class StudyTaskServiceImpl implements StudyTaskService {
 
     private final StudyTaskMapper studyTaskMapper;
+    private final StudyRecordService studyRecordService;
 
     @Override
     public PageResult<StudyTask> pageTasks(Long userId, TaskQueryRequest queryRequest) {
@@ -63,6 +65,8 @@ public class StudyTaskServiceImpl implements StudyTaskService {
     @Override
     @Transactional
     public void deleteTask(Long id) {
+        // 先删除该任务关联的学习记录，避免外键约束导致删除失败
+        studyRecordService.deleteByTaskId(id);
         studyTaskMapper.deleteById(id);
     }
 

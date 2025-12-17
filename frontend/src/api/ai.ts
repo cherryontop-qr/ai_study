@@ -12,3 +12,4 @@ export const generateTaskPlan = (data: AiTaskPlanRequest): Promise<ApiResponse<A
   return post<AiTaskPlanResponse>('/ai/tasks/plan', data);
 };
 
+

@@ -52,17 +52,17 @@
 import { ref, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
 import { getTaskPage } from '@/api/task';
-import type { Task } from '@/types/api';
+import type { Task, TaskProgress } from '@/types/api';
+import { getTaskProgress as getTaskProgressApi } from '@/api/record';
 
 const loading = ref(false);
 const completedTasks = ref<Task[]>([]);
 
-const STORAGE_LEARNED = 'task_learned_minutes';
+// 由后端记录表统计得到的学习进度
+const learnedMap = ref<Record<number, number>>({});
 
 const getTaskProgress = (task: Task): number => {
-  const learnedRaw = localStorage.getItem(STORAGE_LEARNED);
-  const learned: Record<number, number> = learnedRaw ? JSON.parse(learnedRaw) : {};
-  const learnedMinutes = learned[task.id] || 0;
+  const learnedMinutes = learnedMap.value[task.id] || 0;
   const targetMinutes = task.targetHours * 60;
   if (targetMinutes === 0) return 0;
   const progress = Math.round((learnedMinutes / targetMinutes) * 100);
@@ -78,6 +78,15 @@ const formatDate = (dateStr: string): string => {
 const loadCompletedTasks = async () => {
   loading.value = true;
   try {
+    // 先加载学习进度
+    const progressRes = await getTaskProgressApi();
+    if (progressRes.code === 0) {
+      const map: Record<number, number> = {};
+      (progressRes.data as TaskProgress[]).forEach(item => {
+        map[item.taskId] = item.totalMinutes || 0;
+      });
+      learnedMap.value = map;
+    }
     // 取出较多任务，然后在前端根据进度筛选出真正 100% 完成的
     const res = await getTaskPage({
       pageNum: 1,

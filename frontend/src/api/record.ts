@@ -1,6 +1,6 @@
 // src/api/record.ts
 import { get, post, del } from './index';
-import type { ApiResponse, StudyRecord, StudyRecordCreateRequest } from '@/types/api';
+import type { ApiResponse, StudyRecord, StudyRecordCreateRequest, TaskProgress } from '@/types/api';
 
 // 新增打卡记录
 export const createRecord = (data: StudyRecordCreateRequest): Promise<ApiResponse<StudyRecord>> => {
@@ -20,5 +20,10 @@ export const getRecordsByTask = (taskId: number): Promise<ApiResponse<StudyRecor
 // 查询最近 7 天记录
 export const getRecentRecords = (): Promise<ApiResponse<StudyRecord[]>> => {
   return get<StudyRecord[]>('/records/recent');
+};
+
+// 查询当前用户每个任务累计学习时长
+export const getTaskProgress = (): Promise<ApiResponse<TaskProgress[]>> => {
+  return get<TaskProgress[]>('/records/progress');
 };
 

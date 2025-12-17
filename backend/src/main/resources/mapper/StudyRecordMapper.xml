@@ -22,6 +22,10 @@
         DELETE FROM study_record WHERE id = #{id}
     </delete>
 
+    <delete id="deleteByTaskId">
+        DELETE FROM study_record WHERE task_id = #{taskId}
+    </delete>
+
     <select id="findByTaskId" resultMap="StudyRecordResultMap">
         SELECT * FROM study_record WHERE task_id = #{taskId} ORDER BY study_date DESC
     </select>
@@ -32,6 +36,17 @@
         WHERE st.user_id = #{userId}
         AND sr.study_date BETWEEN #{start} AND #{end}
         ORDER BY sr.study_date DESC
+    </select>
+
+    <!-- 按用户汇总每个任务的总学习时长 -->
+    <select id="sumDurationByUserId" resultType="com.ai.study.dto.TaskProgressResponse">
+        SELECT
+            sr.task_id AS taskId,
+            SUM(sr.duration_minutes) AS totalMinutes
+        FROM study_record sr
+        INNER JOIN study_task st ON sr.task_id = st.id
+        WHERE st.user_id = #{userId}
+        GROUP BY sr.task_id
     </select>
 
 </mapper>
