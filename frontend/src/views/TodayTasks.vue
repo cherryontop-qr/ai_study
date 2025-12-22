@@ -163,27 +163,33 @@ const createStudyRecord = async (taskId: number, minutes: number) => {
   }
 };
 
+// 勾选今日任务时触发
 const toggleToday = (item: any) => {
   const learnedRaw = localStorage.getItem(STORAGE_LEARNED);
   const learned: Record<number, number> = learnedRaw ? JSON.parse(learnedRaw) : {};
+  // 1. 计算本次学习时长（今日设定的目标分钟数）
   const delta = item.todayTargetMinutes || (item.targetHours ? item.targetHours * 60 : 0);
   const current = learned[item.taskId || 0] || 0;
 
   if (item.done) {
     learned[item.taskId || 0] = current + delta;
+    //2. 增加本周学习统计（本地存储）
     updateWeekMinutesByDelta(delta);
-    // 勾选完成时，写一条学习记录到数据库
+    // 3. 向后端提交学习记录，持久化本次学习时长
     if (item.taskId) {
       createStudyRecord(item.taskId, delta);
     }
   } else {
     learned[item.taskId || 0] = Math.max(0, current - delta);
+    // 取消勾选时，反向减少时长并回退进度
     updateWeekMinutesByDelta(-delta);
   }
+  // 4. 更新本地缓存的累计学习时长（用于实时显示进度）
   localStorage.setItem(STORAGE_LEARNED, JSON.stringify(learned));
 
   if (item.taskId && item.targetHours && learned[item.taskId] >= item.targetHours * 60) {
     try {
+      // 5. 若累计时长达到目标，自动将任务标记为“已完成（DONE）”
       updateTask(item.taskId, { status: 'DONE' });
     } catch (error) {
       // 忽略错误
@@ -193,7 +199,7 @@ const toggleToday = (item: any) => {
   todayMinutes.value = dailyTodos.value
     .filter((t: any) => t.done)
     .reduce((s: number, t: any) => s + (t.todayTargetMinutes || 0), 0);
-
+  // 6. 保存今日任务状态到本地存储
   saveDailyData();
 };
 

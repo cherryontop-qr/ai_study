@@ -26,9 +26,11 @@ public class TaskController {
     }
 
     @Operation(summary = "分页查询任务")
+    // 分页查询任务接口
     @GetMapping
     public ApiResponse<PageResult<StudyTask>> pageTasks(TaskQueryRequest queryRequest) {
         Long userId = getCurrentUserId();
+        // 调用服务层查询
         PageResult<StudyTask> page = studyTaskService.pageTasks(userId, queryRequest);
         return ApiResponse.success(page);
     }

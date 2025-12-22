@@ -25,11 +25,18 @@ public class AiServiceImpl implements AiService {
     private final StudyRecordService studyRecordService;
     private final ObjectMapper objectMapper;
 
+    // 每周建议核心代码
     @Override
     public String generateWeeklySuggestion(Long userId) {
+        // 1. 确定时间范围：近7天（从6天前到今天）
         LocalDate end = LocalDate.now();
         LocalDate start = end.minusDays(6);
+
+        // 2. 调用学习记录服务，查询该用户在时间范围内的记录
+        // 结果返回 List<StudyRecord> 类型
         List<StudyRecord> records = studyRecordService.listByUserAndDateRange(userId, start, end);
+
+        // 3. 将 List 中的数据格式化为自然语言（供AI理解）
         String dataset = records.isEmpty()
                 ? "最近 7 天没有任何学习记录。"
                 : records.stream()

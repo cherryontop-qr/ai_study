@@ -300,16 +300,17 @@ const clearPlan = () => {
 };
 
 const extractCategory = (title: string, description: string): string => {
-  // 从学习目标 + 标题 + 描述中提取分类
+  // 1.提取文本源：从学习目标 + 标题 + 描述中提取分类
   const base = planForm.goalDescription || '';
   const text = (base + ' ' + title + ' ' + description).toLowerCase();
+  //2.关键词匹配分类
   const categories = ['java', 'spring', 'vue', 'react', '数据库', 'mysql', 'redis', 'docker', 'kubernetes'];
   for (const cat of categories) {
     if (text.includes(cat.toLowerCase())) {
       return cat;
     }
   }
-  // 如果没有匹配关键词，用学习目标前 8 个字作为默认分类
+  //3.默认分类规则：如果没有匹配关键词，用学习目标前 8 个字作为默认分类
   if (base.trim()) {
     return base.trim().slice(0, 8);
   }
@@ -336,13 +337,16 @@ const createTaskFromPlan = async (plannedTask: AiPlannedTask) => {
   }
 };
 
+//一键创建任务
 const createAllTasks = async () => {
+  //先检查是否有可创建的任务计划
   if (!planResult.value || !planResult.value.tasks || planResult.value.tasks.length === 0) {
     ElMessage.warning('没有可创建的任务');
     return;
   }
 
   try {
+    //通过弹窗确认用户是否执行批量创建
     await ElMessageBox.confirm(
       `确定要创建 ${planResult.value.tasks.length} 个任务吗？`,
       '提示',
@@ -350,9 +354,12 @@ const createAllTasks = async () => {
     );
 
     let successCount = 0;
+    //循环创建任务：遍历 AI 生成的任务列表，逐个调用 createTask 接口，并统计成功数量
     for (const plannedTask of planResult.value.tasks) {
       try {
+        // 自动提取分类
         const category = extractCategory(plannedTask.title, plannedTask.description);
+        // 调用创建任务接口
         await createTask({
           title: plannedTask.title,
           description: plannedTask.description,
@@ -573,3 +580,4 @@ watch(
 }
 </style>
 
+：

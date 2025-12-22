@@ -31,8 +31,11 @@ public class StudyTaskServiceImpl implements StudyTaskService {
 
     @Override
     public PageResult<StudyTask> pageAllTasks(TaskQueryRequest queryRequest) {
+        // 查询当前页数据：传入用户ID、筛选条件、offset、pageSize
         List<StudyTask> list = studyTaskMapper.findAll(queryRequest);
+        //查询总任务数（用于计算总页数）
         long total = studyTaskMapper.countAll(queryRequest);
+        //封装分页结果
         return new PageResult<>(list, total, queryRequest.getPageNum(), queryRequest.getPageSize());
     }
 

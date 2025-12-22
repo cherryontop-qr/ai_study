@@ -24,7 +24,7 @@ public class StudyRecordServiceImpl implements StudyRecordService {
         if (record.getCreateTime() == null) {
             record.setCreateTime(LocalDateTime.now());
         }
-        studyRecordMapper.insert(record);
+        studyRecordMapper.insert(record);// 保存记录到数据库
         return record;
     }
 

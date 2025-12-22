@@ -198,7 +198,7 @@
 import { ref, reactive, onMounted, computed } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Search } from '@element-plus/icons-vue';
-import { getTaskPage, createTask, updateTask, deleteTask as deleteTaskApi } from '@/api/task';
+import { getTaskPage, createTask, updateTask, deleteTask as deleteTaskApi } from '@/api/task';// 导入分页查询接口
 import type { Task, TaskProgress } from '@/types/api';
 import { getTaskProgress as getTaskProgressApi } from '@/api/record';
 
@@ -215,6 +215,7 @@ const addToTodayDialogVisible = ref(false);
 const selectedTask = ref<Task | null>(null);
 const todayTaskMinutes = ref<number>(0);
 
+// ！ 分页核心参数&筛选参数（传给后端）
 const query = reactive({
   pageNum: 1,
   pageSize: 10,
@@ -425,6 +426,7 @@ const deleteTask = async (id: number) => {
   }
 };
 
+// 打开“添加到今日任务”弹窗
 const openAddToTodayDialog = (task: Task) => {
   selectedTask.value = task;
   // 默认按整个目标时长
@@ -432,6 +434,7 @@ const openAddToTodayDialog = (task: Task) => {
   addToTodayDialogVisible.value = true;
 };
 
+// 确认添加到今日任务
 const confirmAddToToday = () => {
   if (!selectedTask.value) return;
 
